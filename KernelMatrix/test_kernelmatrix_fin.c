@@ -82,7 +82,7 @@ main(int argc, char **argv)
 
     leafsize = askforint("Cluster resolution?", "h2lib_leafsize", 2*m*m);
 
-    eps = askforreal("Recompression tolerance?", "h2lib_comptol", 1e-4);
+    // eps = askforreal("Recompression tolerance?", "h2lib_comptol", 1e-4);
 
     eta = 2.0;
     
@@ -101,8 +101,10 @@ main(int argc, char **argv)
         (void) printf("    Logarithmic kernel function\n");
         km->kernel = kernel_log;
     }
-    for(i=0; i<points; i++) {
-        km->x[i][0] = FIELD_RAND();	/* Random points in [-1,1]^2 */
+    	/* Random points in [-1,1]^2 */
+    for (i=0; i<points; i++) 
+    {
+        km->x[i][0] = FIELD_RAND();
         km->x[i][1] = FIELD_RAND();
         km->x[i][2] = FIELD_RAND();
     }
@@ -138,24 +140,30 @@ main(int argc, char **argv)
     // ========== Build H2 matrix ==========
 
     start_stopwatch(sw);
+    
     (void) printf("Creating H^2-matrix (Gh1) \n");
     Gh1 = build_from_block_h2matrix(broot, cb, cb);
-    sz = getsize_h2matrix(Gh1);
-    (void) printf("Gh1: %.1f MB\n"
-		"     %.1f KB/DoF\n",
-		sz / 1048576.0, sz / 1024.0 / points);
-    (void) printf("Filling H^2-matrix (Gh1) \n");
     
+    (void) printf("Filling H^2-matrix (Gh1) \n");
     fill_h2matrix_kernelmatrix(km, Gh1);
+    
+    t_setup = stop_stopwatch(sw);
+    sz = getsize_h2matrix(Gh1);
+    (void) printf("Gh1: %.2f seconds\n"
+		"     %.1f MB\n"
+		"     %.1f KB/DoF\n",
+		t_setup, sz / 1048576.0, sz / 1024.0 / points);
 
+    /*
     (void) printf("Recompressing H^2-matrix (Gh2), eps=%g\n", eps);
     Gh2 = compress_h2matrix_h2matrix(Gh1, false, false, 0, eps);
     t_setup = stop_stopwatch(sw);
     sz = getsize_h2matrix(Gh2);
-    (void) printf("Gh1 & Gh2: %.2f seconds\n"
-		"Gh2: %.1f MB\n"
+    (void) printf("Gh2: %.2f seconds\n"
+		"     %.1f MB\n"
 		"     %.1f KB/DoF\n",
 		t_setup, sz / 1048576.0, sz / 1024.0 / points);
+    */
     
     // ========== Test H2 matvec ==========
     x  = new_avector(points);
@@ -164,14 +172,14 @@ main(int argc, char **argv)
     random_real_avector(x);
     
     clear_avector(y1);
-    addeval_h2matrix_avector(1.0, Gh2, x, y1);
+    addeval_h2matrix_avector(1.0, Gh1, x, y1);
     t_matvec = 0;
-    (void) printf("Performing 10 times H2 matvec\n");
+    (void) printf("Performing 10 times H2 matvec (Gh1)\n");
     for (i = 0; i < 10; i++)
     {
         clear_avector(y1);
         start_stopwatch(sw);
-        addeval_h2matrix_avector(1.0, Gh2, x, y1);
+        addeval_h2matrix_avector(1.0, Gh1, x, y1);
         t_matvec += stop_stopwatch(sw);
     }
     (void) printf("    H2 matvec average time = %.3lf s\n", t_matvec / 10.0);
